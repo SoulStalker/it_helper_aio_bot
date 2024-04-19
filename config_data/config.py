@@ -20,7 +20,6 @@ class TgBot:
 class Config:
     tg_bot: TgBot
     db: DatabaseConfig
-    set_operday: DatabaseConfig
 
 
 def load_config(path: str | None = None) -> Config:
