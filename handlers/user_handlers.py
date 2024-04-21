@@ -3,6 +3,7 @@ import datetime
 
 from aiogram import F, Router, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
+from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery, User
 
@@ -43,3 +44,13 @@ async def replace_command(message: Message):
         text=LEXICON_RU['replace'],
         reply_markup=get_addresses_keyboard()
     )
+
+
+# Этот хендлер срабатывает на кнопку "Отмена" и сбрасывает состояние FSM
+@router.callback_query(F.data == 'cancel')
+async def process_press_cancel(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await bot.send_message(
+        chat_id=callback.message.chat.id,
+        text=LEXICON_RU['/help']
+    )
+    await state.clear()
