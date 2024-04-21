@@ -5,7 +5,7 @@ from lexicon.lexicon import LEXICON_RU
 
 
 # Функция создает инлайн клавиатуру с запросом н вывод списка магазинов
-def get_addresses_keyboard() -> InlineKeyboardMarkup:
+def get_addresses_kb() -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
     kb_builder.row(
         InlineKeyboardButton(
@@ -19,3 +19,17 @@ def get_addresses_keyboard() -> InlineKeyboardMarkup:
         width=1
     )
     return kb_builder.as_markup()
+
+
+def addresses_list_kb() -> InlineKeyboardMarkup:
+    kb_builder = InlineKeyboardBuilder()
+    kb_builder.row(
+        InlineKeyboardButton(
+            text=LEXICON_RU['cancel'],
+            callback_data='cancel'
+        ),
+        width=1
+    )
+    return kb_builder.as_markup()
+
+# todo доделать клавиатуру с адресами

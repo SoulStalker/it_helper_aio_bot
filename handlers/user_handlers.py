@@ -8,7 +8,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery, User
 
 from lexicon.lexicon import LEXICON_RU
-from keyboards.keyboards import get_addresses_keyboard
+from keyboards.keyboards import get_addresses_kb, addresses_list_kb
 
 router = Router()
 
@@ -42,7 +42,7 @@ async def service_command(message: Message):
 async def replace_command(message: Message):
     await message.answer(
         text=LEXICON_RU['replace'],
-        reply_markup=get_addresses_keyboard()
+        reply_markup=get_addresses_kb()
     )
 
 
@@ -54,3 +54,12 @@ async def process_press_cancel(callback: CallbackQuery, state: FSMContext, bot: 
         text=LEXICON_RU['/help']
     )
     await state.clear()
+
+
+# Этот хендлер срабатывает на кнопку "Список адресов"
+@router.callback_query(F.data == 'addresses_list')
+async def process_address_list(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.message.edit_text(
+        text=LEXICON_RU['choose_address'],
+        reply_markup=addresses_list_kb(),
+    )
