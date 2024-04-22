@@ -5,9 +5,10 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery, User
 
 from lexicon.lexicon import LEXICON_RU
-from keyboards.keyboards import get_addresses_kb, addresses_list_kb, yes_no_kb
+from keyboards.keyboards import get_addresses_kb, addresses_list_kb, yes_no_kb, cancel_kb
 from services.services import shops
 from filters.filters import IsShopKey, IsShopKeyInput
+from bot import FSMGetInfo
 
 router = Router()
 
@@ -38,11 +39,12 @@ async def service_command(message: Message):
 
 # Этот хендлер срабатывает на команду /replace
 @router.message(Command('replace'))
-async def replace_command(message: Message):
+async def replace_command(message: Message, state: FSMContext):
     await message.answer(
         text=LEXICON_RU['replace'],
         reply_markup=get_addresses_kb()
     )
+    await state.set_state(FSMGetInfo.get_shop)
 
 
 # Этот хендлер срабатывает на кнопку "Отмена" и сбрасывает состояние FSM
@@ -55,9 +57,9 @@ async def process_press_cancel(callback: CallbackQuery, state: FSMContext, bot: 
     await state.clear()
 
 
-# Этот хендлер срабатывает на кнопку "Список адресов"
+# Этот хендлер срабатывает на кнопку "Список адресов" и переводит бота в FSM состояние get_shop
 @router.callback_query(F.data == 'addresses_list')
-async def process_address_list(callback: CallbackQuery, state: FSMContext, bot: Bot):
+async def process_address_list(callback: CallbackQuery):
     await callback.message.edit_text(
         text=LEXICON_RU['choose_address'],
         reply_markup=addresses_list_kb(),
@@ -65,17 +67,49 @@ async def process_address_list(callback: CallbackQuery, state: FSMContext, bot: 
 
 
 # Этот хендлер срабатывает на кнопку с адресом магазина
-@router.callback_query(IsShopKey())
-async def process_shop_button(callback: CallbackQuery, state: FSMContext, bot: Bot):
+@router.callback_query(StateFilter(FSMGetInfo.get_shop), IsShopKey())
+async def process_shop_button(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(shop=callback.data)
+    state_data = await state.get_data()
+    shop_num = state_data['shop']
     await callback.message.edit_text(
-        text=f"{LEXICON_RU['is_right_choose']}: {shops[callback.data]}",
+        text=f"{LEXICON_RU['is_right_choose']}: {shops[shop_num]}",
         reply_markup=yes_no_kb()
     )
 
 
-@router.message(IsShopKeyInput())
-async def process_shop_button(message: Message, state: FSMContext, bot: Bot):
+# Этот хендлер срабатывает на сообщение с номером магазина
+@router.message(StateFilter(FSMGetInfo.get_shop), IsShopKeyInput())
+async def process_shop_button(message: Message, state: FSMContext):
+    await state.update_data(shop=message.text)
+    state_data = await state.get_data()
+    shop_num = state_data['shop']
     await message.answer(
-        text=f"{LEXICON_RU['is_right_choose']}: {shops[message.text]}",
+        text=f"{LEXICON_RU['is_right_choose']}: {shops[shop_num]}",
+        reply_markup=yes_no_kb()
+    )
+
+
+# Этот хендлер срабатывает на кнопку Да в состоянии get_shop
+@router.callback_query(StateFilter(FSMGetInfo.get_shop), F.data == 'yes')
+async def process_yes_button(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        text=LEXICON_RU['get_equipment'],
+        reply_markup=cancel_kb()
+    )
+    await state.set_state(FSMGetInfo.get_equipment)
+
+
+# Этот хендлер срабатывает на кнопку Нет в состоянии get_shop
+@router.callback_query(StateFilter(FSMGetInfo.get_shop), F.data == 'no')
+async def process_no_button(callback: CallbackQuery, state: FSMContext):
+    await replace_command(callback.message, state)
+
+
+# Этот хендлер срабатывает на ввод текста в состоянии get_equipment
+@router.message(StateFilter(FSMGetInfo.get_equipment))
+async def process_get_equipment_text(message: Message, state: FSMContext):
+    await message.answer(
+        text=f"{message.text} {LEXICON_RU['replace_equipment']}",
         reply_markup=yes_no_kb()
     )

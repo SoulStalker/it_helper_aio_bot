@@ -54,3 +54,14 @@ def yes_no_kb() -> InlineKeyboardMarkup:
         )
     )
     return kb_builder.as_markup()
+
+
+def cancel_kb() -> InlineKeyboardMarkup:
+    kb_builder = InlineKeyboardBuilder()
+    kb_builder.add(
+        InlineKeyboardButton(
+            text=LEXICON_RU['cancel'],
+            callback_data='cancel'
+        )
+    )
+    return kb_builder.as_markup()

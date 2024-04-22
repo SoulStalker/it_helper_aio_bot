@@ -3,11 +3,20 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.fsm.state import StatesGroup, State
 
 from config_data.config import load_config
 from keyboards.set_menu import set_main_menu
 from handlers import other_handlers, user_handlers
 from middlewares.outer import ShadowBanMiddleware
+
+
+# FSM состояния
+class FSMGetInfo(StatesGroup):
+    # состояние ожидания номера магазин
+    get_shop = State()
+    # состояние ожидания названия оборудования
+    get_equipment = State()
 
 
 async def main():
