@@ -7,7 +7,7 @@ from aiogram.types import Message, CallbackQuery, User
 from lexicon.lexicon import LEXICON_RU
 from keyboards.keyboards import get_addresses_kb, addresses_list_kb, yes_no_kb
 from services.services import shops
-from filters.filters import IsShopKey
+from filters.filters import IsShopKey, IsShopKeyInput
 
 router = Router()
 
@@ -69,5 +69,13 @@ async def process_address_list(callback: CallbackQuery, state: FSMContext, bot: 
 async def process_shop_button(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.edit_text(
         text=f"{LEXICON_RU['is_right_choose']}: {shops[callback.data]}",
+        reply_markup=yes_no_kb()
+    )
+
+
+@router.message(IsShopKeyInput())
+async def process_shop_button(message: Message, state: FSMContext, bot: Bot):
+    await message.answer(
+        text=f"{LEXICON_RU['is_right_choose']}: {shops[message.text]}",
         reply_markup=yes_no_kb()
     )
