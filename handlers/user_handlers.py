@@ -11,7 +11,7 @@ from filters.filters import IsShopKey, IsShopKeyInput
 from bot import FSMGetInfo
 
 router = Router()
-
+current_shop = None
 
 # Этот хендлер срабатывает на команду /start
 @router.message(CommandStart())
@@ -69,9 +69,11 @@ async def process_address_list(callback: CallbackQuery):
 # Этот хендлер срабатывает на кнопку с адресом магазина
 @router.callback_query(StateFilter(FSMGetInfo.get_shop), IsShopKey())
 async def process_shop_button(callback: CallbackQuery, state: FSMContext):
+    global current_shop
     await state.update_data(shop=callback.data)
     state_data = await state.get_data()
     shop_num = state_data['shop']
+    current_shop = shops[shop_num]
     await callback.message.edit_text(
         text=f"{LEXICON_RU['is_right_choose']}: {shops[shop_num]}",
         reply_markup=yes_no_kb()
@@ -81,9 +83,11 @@ async def process_shop_button(callback: CallbackQuery, state: FSMContext):
 # Этот хендлер срабатывает на сообщение с номером магазина
 @router.message(StateFilter(FSMGetInfo.get_shop), IsShopKeyInput())
 async def process_shop_button(message: Message, state: FSMContext):
+    global current_shop
     await state.update_data(shop=message.text)
     state_data = await state.get_data()
     shop_num = state_data['shop']
+    current_shop = shops[shop_num]
     await message.answer(
         text=f"{LEXICON_RU['is_right_choose']}: {shops[shop_num]}",
         reply_markup=yes_no_kb()
@@ -108,8 +112,24 @@ async def process_no_button(callback: CallbackQuery, state: FSMContext):
 
 # Этот хендлер срабатывает на ввод текста в состоянии get_equipment
 @router.message(StateFilter(FSMGetInfo.get_equipment))
-async def process_get_equipment_text(message: Message, state: FSMContext):
+async def process_get_equipment_text(message: Message):
+    global current_shop
     await message.answer(
-        text=f"{message.text} {LEXICON_RU['replace_equipment']}",
+        text=f"{message.text} {LEXICON_RU['replace_equipment']} {current_shop}",
         reply_markup=yes_no_kb()
     )
+
+
+# Этот хендлер срабатывает на кнопку Да в состоянии get_equipment
+@router.callback_query(StateFilter(FSMGetInfo.get_equipment), F.data == 'yes')
+async def process_yes_button(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        text=LEXICON_RU['done'],
+    )
+    await state.clear()
+
+
+# Этот хендлер срабатывает на кнопку Нет в состоянии get_shop
+@router.callback_query(StateFilter(FSMGetInfo.get_equipment), F.data == 'no')
+async def process_no_button(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await process_press_cancel(callback, state, bot)
