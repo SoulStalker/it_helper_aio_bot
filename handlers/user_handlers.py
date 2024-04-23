@@ -2,12 +2,14 @@ from aiogram import F, Router, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from lexicon.lexicon import LEXICON_RU
 from keyboards.keyboards import get_addresses_kb, addresses_list_kb, yes_no_kb, cancel_kb
 from services.services import shops
 from filters.filters import IsShopKey, IsShopKeyInput
 from bot import FSMGetInfo
+from database.orm_query import orm_add_user, orm_get_user_by_tg_id
 
 router = Router()
 current_shop = None
@@ -15,8 +17,13 @@ current_shop = None
 
 # Этот хендлер срабатывает на команду /start
 @router.message(CommandStart())
-async def start_command(message: Message):
+async def start_command(message: Message, session: AsyncSession):
     await message.answer(text=LEXICON_RU['/start'])
+    if not await orm_get_user_by_tg_id(session, message.from_user.id):
+        await orm_add_user(session, {
+            'tg_user_id': message.from_user.id,
+            'tg_name': message.from_user.username,
+        })
 
 
 # Этот хендлер срабатывает на команду /help
