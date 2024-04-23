@@ -22,7 +22,7 @@ async def start_command(message: Message, session: AsyncSession):
     if not await orm_get_user_by_tg_id(session, message.from_user.id):
         await orm_add_user(session, {
             'tg_user_id': message.from_user.id,
-            'tg_name': message.from_user.username,
+            'tg_name': f'{message.from_user.username} - {message.from_user.full_name}',
         })
 
 
