@@ -14,6 +14,7 @@ class DatabaseConfig:
 class TgBot:
     token: str
     admin_ids: list[int]
+    boss_id: int
 
 
 @dataclass
@@ -30,6 +31,7 @@ def load_config(path: str | None = None) -> Config:
         tg_bot=TgBot(
             token=env('BOT_TOKEN'),
             admin_ids=list(map(int, env.list('ADMIN_IDS'))),
+            boss_id=int(env('BOSS_ID'))
         ),
         db=DatabaseConfig(
             db_host=env('DB_HOST'),

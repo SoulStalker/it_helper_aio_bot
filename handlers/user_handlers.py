@@ -1,8 +1,7 @@
 from aiogram import F, Router, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message, CallbackQuery, User
+from aiogram.types import Message, CallbackQuery
 
 from lexicon.lexicon import LEXICON_RU
 from keyboards.keyboards import get_addresses_kb, addresses_list_kb, yes_no_kb, cancel_kb
@@ -12,6 +11,7 @@ from bot import FSMGetInfo
 
 router = Router()
 current_shop = None
+
 
 # Этот хендлер срабатывает на команду /start
 @router.message(CommandStart())
