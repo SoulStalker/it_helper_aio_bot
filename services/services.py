@@ -6,3 +6,5 @@ with open('shops_and_legals.json', 'r', encoding='utf8') as file:
     legals = data['legals']
 
 
+
+

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiogram import F, Router, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -9,10 +11,10 @@ from keyboards.keyboards import get_addresses_kb, addresses_list_kb, yes_no_kb, 
 from services.services import shops
 from filters.filters import IsShopKey, IsShopKeyInput
 from bot import FSMGetInfo
-from database.orm_query import orm_add_user, orm_get_user_by_tg_id
+from database.orm_query import orm_add_user, orm_get_user_by_tg_id, orm_get_day_orders, orm_new_order
 
 router = Router()
-current_shop = None
+current_shop = {}
 
 
 # Этот хендлер срабатывает на команду /start
@@ -80,7 +82,7 @@ async def process_shop_button(callback: CallbackQuery, state: FSMContext):
     await state.update_data(shop=callback.data)
     state_data = await state.get_data()
     shop_num = state_data['shop']
-    current_shop = shops[shop_num]
+    current_shop = {shop_num: shops[shop_num]}
     await callback.message.edit_text(
         text=f"{LEXICON_RU['is_right_choose']}: {shops[shop_num]}",
         reply_markup=yes_no_kb()
@@ -94,7 +96,7 @@ async def process_shop_button(message: Message, state: FSMContext):
     await state.update_data(shop=message.text)
     state_data = await state.get_data()
     shop_num = state_data['shop']
-    current_shop = shops[shop_num]
+    current_shop = {shop_num: shops[shop_num]}
     await message.answer(
         text=f"{LEXICON_RU['is_right_choose']}: {shops[shop_num]}",
         reply_markup=yes_no_kb()
@@ -119,8 +121,15 @@ async def process_no_button(callback: CallbackQuery, state: FSMContext):
 
 # Этот хендлер срабатывает на ввод текста в состоянии get_equipment
 @router.message(StateFilter(FSMGetInfo.get_equipment))
-async def process_get_equipment_text(message: Message):
+async def process_get_equipment_text(message: Message, session: AsyncSession):
+    db_user = await orm_get_user_by_tg_id(session, tg_id=message.from_user.id)
     global current_shop
+    shop_num = next(iter(current_shop))
+    await orm_new_order(session, db_user.id, {
+        'message': message.text,
+        'shop_num': int(shop_num),
+        'shop_address': current_shop[shop_num]
+    })
     await message.answer(
         text=f"{message.text} {LEXICON_RU['replace_equipment']} {current_shop}",
         reply_markup=yes_no_kb()
@@ -140,3 +149,11 @@ async def process_yes_button(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(StateFilter(FSMGetInfo.get_equipment), F.data == 'no')
 async def process_no_button(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await process_press_cancel(callback, state, bot)
+
+
+@router.message(Command('modem'))
+async def modem_handler(message: Message, session: AsyncSession):
+
+    orders = await orm_get_day_orders(session, datetime.today())
+    print(orders)
+    await message.answer(text='got')
