@@ -11,7 +11,7 @@ from keyboards.keyboards import get_addresses_kb, addresses_list_kb, yes_no_kb, 
 from services.services import shops
 from filters.filters import IsShopKey, IsShopKeyInput
 from bot import FSMGetInfo
-from database.orm_query import orm_add_user, orm_get_user_by_tg_id, orm_get_day_orders, orm_new_order
+from database.orm_query import orm_add_user, orm_get_user_by_tg_id, orm_get_day_orders, orm_new_order, orm_get_user_by_id
 
 router = Router()
 current_shop = {}
@@ -24,7 +24,7 @@ async def start_command(message: Message, session: AsyncSession):
     if not await orm_get_user_by_tg_id(session, message.from_user.id):
         await orm_add_user(session, {
             'tg_user_id': message.from_user.id,
-            'tg_name': f'{message.from_user.username} - {message.from_user.full_name}',
+            'tg_name': f'{message.from_user.full_name}',
         })
 
 
@@ -131,7 +131,7 @@ async def process_get_equipment_text(message: Message, session: AsyncSession):
         'shop_address': current_shop[shop_num]
     })
     await message.answer(
-        text=f"{message.text} {LEXICON_RU['replace_equipment']} {current_shop}",
+        text=f"{message.text} {LEXICON_RU['replace_equipment']} {current_shop[shop_num]}",
         reply_markup=yes_no_kb()
     )
 
@@ -151,9 +151,23 @@ async def process_no_button(callback: CallbackQuery, state: FSMContext, bot: Bot
     await process_press_cancel(callback, state, bot)
 
 
-@router.message(Command('modem'))
-async def modem_handler(message: Message, session: AsyncSession):
+# Хендлер срабатывает на команду /orders и выдает список заказов
+# todo Добавить вывод по рас списанию
+@router.message(Command('orders'))
+async def process_orders_command(message: Message, session: AsyncSession):
+    today = datetime.today()
+    start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0)
+    # end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59)
+    msg = ''
+    orders_by_shop = {}
+    orders = await orm_get_day_orders(session, start_of_day)
+    for order in orders:
+        user = await orm_get_user_by_id(session, order.user_id)
+        orders_by_shop.setdefault(order.shop_address, []).append((order.message, user.tg_user_name, order.created_at))
 
-    orders = await orm_get_day_orders(session, datetime.today())
-    print(orders)
-    await message.answer(text='got')
+    for k, v in orders_by_shop.items():
+        msg += f'{k}:\n'
+        for data in v:
+            msg += f"<code>{data[0]} - {data[1]} - {datetime.strftime(data[2], '%H:%M')}</code>\n"
+        msg += f"{'-' * len(k)}\n\n"
+    await message.answer(text=msg)

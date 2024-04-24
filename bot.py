@@ -28,7 +28,7 @@ async def main():
     await set_main_menu(bot)
     # # Создаем базу
     # await drop_tables()
-    await create_tables()
+    # await create_tables()
 
     dp.include_router(user_handlers.router)
     dp.include_router(other_handlers.router)

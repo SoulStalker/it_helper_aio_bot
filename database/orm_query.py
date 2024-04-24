@@ -15,6 +15,14 @@ async def orm_get_user_by_tg_id(session: AsyncSession, tg_id: int) -> User:
     return user
 
 
+# Функция получения пользователя по id
+async def orm_get_user_by_id(session: AsyncSession, db_user_id: int) -> User:
+    query = select(User).where(User.id==db_user_id)
+    users = await session.execute(query)
+    user = users.scalars().first()
+    return user
+
+
 # Функция добавления нового пользователя
 async def orm_add_user(session: AsyncSession, user: dict) -> None:
     obj = User(
@@ -37,12 +45,9 @@ async def orm_new_order(session: AsyncSession, db_user_id: int, order: dict) -> 
     await session.commit()
 
 
-
-
-
 # Функция получения заявок за заданный день
 async def orm_get_day_orders(session: AsyncSession, day: datetime) -> Sequence[Order]:
-    query = select(Order).where(Order.created_at == day)
+    query = select(Order).where(Order.created_at > day)
     orders = await session.execute(query)
     orders = orders.scalars().all()
     return orders
