@@ -1,7 +1,7 @@
 LEXICON_COMMANDS_RU: dict[str, str] = {
     '/start': 'Запуск бота',
     '/help': 'Справка по работе бота',
-    '/service': 'Настройка',
+    '/replace': 'Заявка на замену',
     '/contacts': 'Другие способы связи',
 }
 

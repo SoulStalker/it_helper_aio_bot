@@ -1,4 +1,5 @@
-from datetime import datetime
+import asyncio
+from datetime import datetime, time
 
 from aiogram import F, Router, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
@@ -12,9 +13,12 @@ from services.services import shops
 from filters.filters import IsShopKey, IsShopKeyInput
 from bot import FSMGetInfo
 from database.orm_query import orm_add_user, orm_get_user_by_tg_id, orm_get_day_orders, orm_new_order, orm_get_user_by_id
+from config_data.config import load_config
 
 router = Router()
 current_shop = {}
+send_to_boss_task = None
+config = load_config('.env')
 
 
 # Этот хендлер срабатывает на команду /start
@@ -138,11 +142,15 @@ async def process_get_equipment_text(message: Message, session: AsyncSession):
 
 # Этот хендлер срабатывает на кнопку Да в состоянии get_equipment
 @router.callback_query(StateFilter(FSMGetInfo.get_equipment), F.data == 'yes')
-async def process_yes_button(callback: CallbackQuery, state: FSMContext):
+async def process_yes_button(callback: CallbackQuery, state: FSMContext, bot: Bot, session: AsyncSession):
+    global send_to_boss_task
     await callback.message.edit_text(
         text=LEXICON_RU['done'],
     )
     await state.clear()
+    if send_to_boss_task:
+        send_to_boss_task.cancel()
+    send_to_boss_task = asyncio.create_task(send_scheduled_orders(bot, session, config.tg_bot.boss_id, time(20, 00)))
 
 
 # Этот хендлер срабатывает на кнопку Нет в состоянии get_shop
@@ -171,3 +179,28 @@ async def process_orders_command(message: Message, session: AsyncSession):
             msg += f"<code>{data[0]} - {data[1]} - {datetime.strftime(data[2], '%H:%M')}</code>\n"
         msg += f"{'-' * len(k)}\n\n"
     await message.answer(text=msg)
+
+
+async def send_scheduled_orders(bot: Bot, session: AsyncSession, chat_id: int, send_time: time):
+    now = datetime.now().time()
+    if now > send_time:
+        return
+    else:
+        while now < send_time:
+            await asyncio.sleep(60)
+            now = datetime.now().time()
+        today = datetime.today()
+        start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0)
+        msg = ''
+        orders_by_shop = {}
+        orders = await orm_get_day_orders(session, start_of_day)
+        for order in orders:
+            user = await orm_get_user_by_id(session, order.user_id)
+            orders_by_shop.setdefault(order.shop_address, []).append((order.message, user.tg_user_name, order.created_at))
+
+        for k, v in orders_by_shop.items():
+            msg += f'{k}:\n'
+            for data in v:
+                msg += f"<code>{data[0]} - {data[1]} - {datetime.strftime(data[2], '%H:%M')}</code>\n"
+            msg += f"{'-' * len(k)}\n\n"
+        await bot.send_message(chat_id=chat_id, text=msg)
