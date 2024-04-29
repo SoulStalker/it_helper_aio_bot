@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 from aiogram import F, Router, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
@@ -160,27 +160,15 @@ async def process_no_button(callback: CallbackQuery, state: FSMContext, bot: Bot
 
 
 # Хендлер срабатывает на команду /orders и выдает список заказов
-# todo Добавить вывод по рас списанию
 @router.message(Command('orders'))
-async def process_orders_command(message: Message, session: AsyncSession):
-    today = datetime.today()
-    start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0)
-    # end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59)
-    msg = ''
-    orders_by_shop = {}
-    orders = await orm_get_day_orders(session, start_of_day)
-    for order in orders:
-        user = await orm_get_user_by_id(session, order.user_id)
-        orders_by_shop.setdefault(order.shop_address, []).append((order.message, user.tg_user_name, order.created_at))
-
-    for k, v in orders_by_shop.items():
-        msg += f'{k}:\n'
-        for data in v:
-            msg += f"<code>{data[0]} - {data[1]} - {datetime.strftime(data[2], '%H:%M')}</code>\n"
-        msg += f"{'-' * len(k)}\n\n"
-    await message.answer(text=msg)
+async def process_orders_command(message: Message, session: AsyncSession, bot: Bot):
+    await message.answer(text=LEXICON_RU['wait'])
+    now = datetime.now() + timedelta(seconds=3)
+    print(now)
+    await send_scheduled_orders(bot, session, config.tg_bot.boss_id, now.time())
 
 
+# Отправка списка заказов по расписанию
 async def send_scheduled_orders(bot: Bot, session: AsyncSession, chat_id: int, send_time: time):
     now = datetime.now().time()
     if now > send_time:
