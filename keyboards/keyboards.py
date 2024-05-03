@@ -28,9 +28,10 @@ def addresses_list_kb() -> InlineKeyboardMarkup:
     for k, v in shops.items():
         kb_builder.row(InlineKeyboardButton(
             text=f'{k}: {v}',
-            callback_data=k
+            callback_data=k,
             )
         ),
+    kb_builder.adjust(2, 2)
     kb_builder.row(
         InlineKeyboardButton(
             text=LEXICON_RU['cancel'],
