@@ -162,10 +162,12 @@ async def process_no_button(callback: CallbackQuery, state: FSMContext, bot: Bot
 # Хендлер срабатывает на команду /orders и выдает список заказов
 @router.message(Command('orders'))
 async def process_orders_command(message: Message, session: AsyncSession, bot: Bot):
-    await message.answer(text=LEXICON_RU['wait'])
-    now = datetime.now() + timedelta(seconds=3)
-    print(now)
-    await send_scheduled_orders(bot, session, config.tg_bot.boss_id, now.time())
+    if message.from_user.id != config.tg_bot.boss_id:
+        await message.answer(text=LEXICON_RU['not_admin'])
+    else:
+        await message.answer(text=LEXICON_RU['wait'])
+        now = datetime.now() + timedelta(seconds=3)
+        await send_scheduled_orders(bot, session, config.tg_bot.boss_id, now.time())
 
 
 # Отправка списка заказов по расписанию
